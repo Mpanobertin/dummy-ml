@@ -9,9 +9,11 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // POST endpoint for predictions
-app.post('/predict', (req, res) => {
-    const guests = req.body;
+app.post('/predict', async (req, res) => {
 
+    console.log("REQUEST BODY:", req.body);  // ← INSERT THIS
+
+    const guests = req.body;
     // Validate input
     if (!Array.isArray(guests) || guests.length === 0) {
         return res.status(400).json({ error: 'Request body must be a non-empty array of guests' });
