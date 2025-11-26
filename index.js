@@ -1,28 +1,45 @@
 const express = require('express');
 const app = express();
+app.use(express.json()); // parse incoming JSON
 
-// Parse incoming JSON
-app.use(express.json());
-
+// Predict route
 app.post('/predict', (req, res) => {
-    const guest = req.body; // preserves all fields sent from n8n
+  try {
+    // Ensure body is always an array
+    const guests = Array.isArray(req.body) ? req.body : [req.body];
 
-    // Generate dummy predictions
-    const predictions = {
-        spa: parseFloat((Math.random()).toFixed(2)),
-        dinner: parseFloat((Math.random()).toFixed(2)),
-        breakfast: parseFloat((Math.random()).toFixed(2)),
-        best_send_hour: Math.floor(Math.random() * 6) + 17 // 17-22
-    };
+    // Process each guest
+    const response = guests.map(guest => {
+      // Default segment logic if not provided
+      let segment = guest.segment && guest.segment !== "" ? guest.segment : 'unknown';
 
-    // Combine guest info and predictions
-    const response = {
-        ...guest,      // preserves all original columns
-        ...predictions  // add predictions
-    };
+      // Example smart segment logic
+      if (!guest.segment || guest.segment === "") {
+        if (guest.country) {
+          const nat = guest.country.toLowerCase();
+          if (['usa', 'canada'].includes(nat)) segment = 'north_america';
+          else if (['uk', 'france', 'germany'].includes(nat)) segment = 'europe';
+          else if (['japan', 'china', 'south korea'].includes(nat)) segment = 'asia';
+          else if (['rwanda', 'kenya', 'uganda'].includes(nat)) segment = 'africa';
+        }
+
+        if (guest.total_spend_usd && guest.total_spend_usd > 1500) segment += '_vip';
+        if (guest.points && guest.points >= 5) segment += '_loyal';
+
+        // Additional logic can be added here (spa, game points, etc.)
+      }
+
+      // Return updated guest object
+      return { ...guest, segment };
+    });
 
     res.json(response);
+  } catch (err) {
+    console.error(err);
+    res.status(400).send('Bad Request');
+  }
 });
 
+// Start server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Dummy ML server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
