@@ -8,50 +8,52 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
-// Function to calculate dynamic preferences based on purpose and room_type
-function getPreferences(guest) {
-    const roomMultiplier = guest.room_type === 'Suite' ? 1.0 :
-                           guest.room_type === 'Deluxe' ? 0.8 : 0.6;
+// --- Utility functions ---
 
-    let spaScore = 0, dinnerScore = 0, breakfastScore = 0;
+// Mock AI enrichment placeholder (future integration)
+async function getPreferencesForNewGuest(guest) {
+    // Example logic based on purpose_of_visit and room_type
+    let spaScore = 0.2;
+    let dinnerScore = 0.3;
+    let breakfastScore = 0.4;
 
     if (guest.purpose_of_visit === "Vacation") {
-        spaScore = 0.9 * roomMultiplier;
-        dinnerScore = 0.85 * roomMultiplier;
-        breakfastScore = 0.8 * roomMultiplier;
-    } else { // Business
-        spaScore = 0.4 * roomMultiplier;
-        dinnerScore = 0.5 * roomMultiplier;
-        breakfastScore = 0.6 * roomMultiplier;
+        spaScore = 0.7;
+        dinnerScore = 0.8;
+        breakfastScore = 0.6;
+    } else if (guest.purpose_of_visit === "Business") {
+        spaScore = 0.3;
+        dinnerScore = 0.5;
+        breakfastScore = 0.4;
     }
 
-    // If has_spa/dinner/breakfast is defined, override with explicit 1/0
-    if (guest.has_spa !== undefined) spaScore = guest.has_spa ? 1 : 0;
-    if (guest.has_dinner !== undefined) dinnerScore = guest.has_dinner ? 1 : 0;
-    if (guest.has_breakfast !== undefined) breakfastScore = guest.has_breakfast ? 1 : 0;
+    // Optional: adjust based on room_type
+    if (guest.room_type === "Suite") {
+        spaScore = Math.min(spaScore + 0.1, 1);
+        dinnerScore = Math.min(dinnerScore + 0.1, 1);
+    }
 
-    return {
-        spa: Math.min(1, spaScore),
-        dinner: Math.min(1, dinnerScore),
-        breakfast: Math.min(1, breakfastScore)
-    };
+    return { spa: spaScore, dinner: dinnerScore, breakfast: breakfastScore };
 }
 
-// Function to calculate High/Medium/Low segment
+// Calculate segment High / Medium / Low
 function calculateSegment(preferences, guest) {
-    const score =
-        (preferences.spa || 0) * 0.3 +
-        (preferences.dinner || 0) * 0.4 +
-        (preferences.breakfast || 0) * 0.3;
+    const score = (preferences.spa * 0.3) + (preferences.dinner * 0.4) + (preferences.breakfast * 0.3);
 
     if (guest.purpose_of_visit === "Vacation") {
-        return score > 0.6 ? "High" : score > 0.4 ? "Medium" : "Low";
-    } else { // Business
-        return score > 0.5 ? "High" : score > 0.3 ? "Medium" : "Low";
+        if (guest.room_type === "Suite") return score > 0.5 ? "High" : "Medium";
+        return score > 0.6 ? "High" : "Medium";
     }
+
+    if (guest.purpose_of_visit === "Business") {
+        if (guest.room_type === "Suite") return score > 0.6 ? "High" : "Medium";
+        return score > 0.4 ? "Medium" : "Low";
+    }
+
+    return score > 0.5 ? "Medium" : "Low";
 }
 
-// POST /predict endpoint
+// --- POST /predict ---
 app.post('/predict', async (req, res) => {
     const guests = req.body;
 
@@ -62,13 +64,20 @@ app.post('/predict', async (req, res) => {
     const predictions = [];
 
     for (const guest of guests) {
-        // Clean guest_id
-        const guestId = String(guest.guest_id || guest.row_number || '').replace(/^=/, '');
+        // Ensure guest_id is unique, trimmed, and remove leading '=' if from Excel
+        const guestId = String(guest.guest_id || guest.row_number || '').replace(/^=/, '').trim();
 
-        // Get dynamic preferences
-        const preferences = getPreferences(guest);
+        let preferences = { spa: 0.2, dinner: 0.3, breakfast: 0.4 };
 
-        // Get segment
+        // Determine preferences: if missing or undefined → get via placeholder logic (future AI enrichment)
+        if (guest.has_spa === undefined && guest.has_dinner === undefined && guest.has_breakfast === undefined) {
+            preferences = await getPreferencesForNewGuest(guest);
+        } else {
+            preferences.spa = guest.has_spa ? 1 : 0;
+            preferences.dinner = guest.has_dinner ? 1 : 0;
+            preferences.breakfast = guest.has_breakfast ? 1 : 0;
+        }
+
         const segment = calculateSegment(preferences, guest);
 
         predictions.push({
@@ -76,7 +85,7 @@ app.post('/predict', async (req, res) => {
             spa: preferences.spa,
             dinner: preferences.dinner,
             breakfast: preferences.breakfast,
-            best_send_hour: 17, // fixed for now
+            best_send_hour: 17,
             segment: segment
         });
     }
@@ -84,7 +93,7 @@ app.post('/predict', async (req, res) => {
     res.json(predictions);
 });
 
-// Start server
+// --- Start server ---
 app.listen(PORT, () => {
     console.log(`Dummy ML service running on port ${PORT}`);
 });
