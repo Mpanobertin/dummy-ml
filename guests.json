@@ -1,48 +1,52 @@
 [
-    {
-        "row_number": 1,
-        "guest_id": "G001",
-        "name": "Alice Johnson",
-        "email": "alice.j@example.com",
-        "room_type": "Suite",
-        "purpose_of_visit": "Vacation",
-        "has_spa": 1,
-        "has_dinner": 1,
-        "has_breakfast": 1
-    },
-    {
-        "row_number": 2,
-        "guest_id": "G002",
-        "name": "Bob Smith",
-        "email": "bob.s@example.com",
-        "room_type": "Standard",
-        "purpose_of_visit": "Business",
-        "has_spa": 0,
-        "has_dinner": 1,
-        "has_breakfast": 1
-    },
-    {
-        "row_number": 3,
-        "guest_id": "G003",
-        "name": "Cathy Lee",
-        "email": "cathy.l@example.com",
-        "room_type": "Deluxe",
-        "purpose_of_visit": "Vacation"
-    },
-    {
-        "row_number": 4,
-        "guest_id": "G004",
-        "name": "David Brown",
-        "email": "david.b@example.com",
-        "room_type": "Standard",
-        "purpose_of_visit": "Business"
-    },
-    {
-        "row_number": 5,
-        "guest_id": "G005",
-        "name": "Eva Green",
-        "email": "eva.g@example.com",
-        "room_type": "Suite",
-        "purpose_of_visit": "Vacation"
-    }
+  {
+    "guest_id": "G001",
+    "name": "Alice Johnson",
+    "email": "alice.j@example.com",
+    "room_type": "Suite",
+    "purpose_of_visit": "Vacation",
+    "has_spa": 1,
+    "has_dinner": 1,
+    "has_breakfast": 1
+  },
+  {
+    "guest_id": "G002",
+    "name": "Bob Smith",
+    "email": "bob.s@example.com",
+    "room_type": "Standard",
+    "purpose_of_visit": "Business",
+    "has_spa": 0,
+    "has_dinner": 1,
+    "has_breakfast": 1
+  },
+  {
+    "guest_id": "G003",
+    "name": "Carol Lee",
+    "email": "carol.l@example.com",
+    "room_type": "Deluxe",
+    "purpose_of_visit": "Vacation",
+    "has_spa": 1,
+    "has_dinner": 0,
+    "has_breakfast": 1
+  },
+  {
+    "guest_id": "G004",
+    "name": "David Brown",
+    "email": "david.b@example.com",
+    "room_type": "Economy",
+    "purpose_of_visit": "Business",
+    "has_spa": 0,
+    "has_dinner": 0,
+    "has_breakfast": 1
+  },
+  {
+    "guest_id": "G005",
+    "name": "Eva Green",
+    "email": "eva.g@example.com",
+    "room_type": "Suite",
+    "purpose_of_visit": "Vacation",
+    "has_spa": 1,
+    "has_dinner": 1,
+    "has_breakfast": 1
+  }
 ]
