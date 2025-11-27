@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const { v4: uuidv4 } = require('uuid'); // for unique guest IDs if missing
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,49 +8,50 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
-// Baseline preferences for each purpose of visit
-const baseScores = {
-    Vacation: { spa: 0.7, dinner: 0.8, breakfast: 0.6 },
-    Business: { spa: 0.3, dinner: 0.5, breakfast: 0.4 },
-    Other: { spa: 0.2, dinner: 0.3, breakfast: 0.4 }
-};
+// Function to calculate dynamic preferences based on purpose and room_type
+function getPreferences(guest) {
+    const roomMultiplier = guest.room_type === 'Suite' ? 1.0 :
+                           guest.room_type === 'Deluxe' ? 0.8 : 0.6;
 
-// Room type multiplier for higher-end rooms
-const roomMultiplier = {
-    Suite: 1.2,
-    Deluxe: 1.1,
-    Standard: 1.0,
-    Economy: 0.9
-};
+    let spaScore = 0, dinnerScore = 0, breakfastScore = 0;
 
-// Function to calculate spend segment
+    if (guest.purpose_of_visit === "Vacation") {
+        spaScore = 0.9 * roomMultiplier;
+        dinnerScore = 0.85 * roomMultiplier;
+        breakfastScore = 0.8 * roomMultiplier;
+    } else { // Business
+        spaScore = 0.4 * roomMultiplier;
+        dinnerScore = 0.5 * roomMultiplier;
+        breakfastScore = 0.6 * roomMultiplier;
+    }
+
+    // If has_spa/dinner/breakfast is defined, override with explicit 1/0
+    if (guest.has_spa !== undefined) spaScore = guest.has_spa ? 1 : 0;
+    if (guest.has_dinner !== undefined) dinnerScore = guest.has_dinner ? 1 : 0;
+    if (guest.has_breakfast !== undefined) breakfastScore = guest.has_breakfast ? 1 : 0;
+
+    return {
+        spa: Math.min(1, spaScore),
+        dinner: Math.min(1, dinnerScore),
+        breakfast: Math.min(1, breakfastScore)
+    };
+}
+
+// Function to calculate High/Medium/Low segment
 function calculateSegment(preferences, guest) {
-    let score = preferences.spa * 0.3 + preferences.dinner * 0.4 + preferences.breakfast * 0.3;
+    const score =
+        (preferences.spa || 0) * 0.3 +
+        (preferences.dinner || 0) * 0.4 +
+        (preferences.breakfast || 0) * 0.3;
 
-    // Purpose-based adjustment
-    if (guest.purpose_of_visit === "Vacation") score += 0.1;
-    if (guest.purpose_of_visit === "Business") score += 0;
-
-    // Room type multiplier
-    const multiplier = roomMultiplier[guest.room_type] || 1.0;
-    score *= multiplier;
-
-    if (score >= 0.7) return "High";
-    if (score >= 0.45) return "Medium";
-    return "Low";
+    if (guest.purpose_of_visit === "Vacation") {
+        return score > 0.6 ? "High" : score > 0.4 ? "Medium" : "Low";
+    } else { // Business
+        return score > 0.5 ? "High" : score > 0.3 ? "Medium" : "Low";
+    }
 }
 
-// Function to calculate best send hour dynamically
-function calculateBestSendHour(segment) {
-    // High spenders: evening offers (17-19)
-    // Medium spenders: late afternoon (15-17)
-    // Low spenders: morning (9-11)
-    if (segment === "High") return 18;
-    if (segment === "Medium") return 16;
-    return 10;
-}
-
-// POST /predict
+// POST /predict endpoint
 app.post('/predict', async (req, res) => {
     const guests = req.body;
 
@@ -62,36 +62,21 @@ app.post('/predict', async (req, res) => {
     const predictions = [];
 
     for (const guest of guests) {
-        // Ensure numeric boolean values
-        const has_spa = Number(guest.has_spa) === 1;
-        const has_dinner = Number(guest.has_dinner) === 1;
-        const has_breakfast = Number(guest.has_breakfast) === 1;
+        // Clean guest_id
+        const guestId = String(guest.guest_id || guest.row_number || '').replace(/^=/, '');
 
-        // Get baseline preferences for purpose
-        let preferences = baseScores[guest.purpose_of_visit] || baseScores["Other"];
+        // Get dynamic preferences
+        const preferences = getPreferences(guest);
 
-        // Override with guest flags if provided
-        preferences = {
-            spa: has_spa ? preferences.spa : 0.05,
-            dinner: has_dinner ? preferences.dinner : 0.1,
-            breakfast: has_breakfast ? preferences.breakfast : 0.1
-        };
-
-        // Calculate segment
+        // Get segment
         const segment = calculateSegment(preferences, guest);
 
-        // Calculate best send hour dynamically
-        const best_send_hour = calculateBestSendHour(segment);
-
-        // Ensure unique guest_id
-        const guest_id = guest.guest_id || `guest-${uuidv4()}`;
-
         predictions.push({
-            guest_id: guest_id,
+            guest_id: guestId,
             spa: preferences.spa,
             dinner: preferences.dinner,
             breakfast: preferences.breakfast,
-            best_send_hour: best_send_hour,
+            best_send_hour: 17, // fixed for now
             segment: segment
         });
     }
