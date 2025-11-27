@@ -1,8 +1,11 @@
 [
   {
+    "row_number": 1,
     "guest_id": "G001",
     "name": "Alice Johnson",
     "email": "alice.j@example.com",
+    "country": "USA",
+    "age_group": "30-40",
     "room_type": "Suite",
     "purpose_of_visit": "Vacation",
     "has_spa": 1,
@@ -10,9 +13,12 @@
     "has_breakfast": 1
   },
   {
+    "row_number": 2,
     "guest_id": "G002",
     "name": "Bob Smith",
     "email": "bob.s@example.com",
+    "country": "UK",
+    "age_group": "25-35",
     "room_type": "Standard",
     "purpose_of_visit": "Business",
     "has_spa": 0,
@@ -20,33 +26,36 @@
     "has_breakfast": 1
   },
   {
+    "row_number": 3,
     "guest_id": "G003",
-    "name": "Carol Lee",
-    "email": "carol.l@example.com",
+    "name": "Carla Rivera",
+    "email": "carla.r@example.com",
+    "country": "Spain",
+    "age_group": "40-50",
     "room_type": "Deluxe",
-    "purpose_of_visit": "Vacation",
-    "has_spa": 1,
-    "has_dinner": 0,
-    "has_breakfast": 1
-  },
+    "purpose_of_visit": "Vacation"
+    },
   {
+    "row_number": 4,
     "guest_id": "G004",
-    "name": "David Brown",
-    "email": "david.b@example.com",
-    "room_type": "Economy",
-    "purpose_of_visit": "Business",
-    "has_spa": 0,
-    "has_dinner": 0,
-    "has_breakfast": 1
-  },
-  {
-    "guest_id": "G005",
-    "name": "Eva Green",
-    "email": "eva.g@example.com",
+    "name": "Daniel Kim",
+    "email": "daniel.k@example.com",
+    "country": "South Korea",
+    "age_group": "30-40",
     "room_type": "Suite",
+    "purpose_of_visit": "Business"
+    },
+  {
+    "row_number": 5,
+    "guest_id": "G005",
+    "name": "Eve Thompson",
+    "email": "eve.t@example.com",
+    "country": "Canada",
+    "age_group": "20-30",
+    "room_type": "Standard",
     "purpose_of_visit": "Vacation",
     "has_spa": 1,
-    "has_dinner": 1,
+    "has_dinner": 0,
     "has_breakfast": 1
   }
 ]
