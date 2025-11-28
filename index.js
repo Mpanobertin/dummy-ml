@@ -1,99 +1,79 @@
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
+// index.js - Phase 2 Smart Segmentation (Improved for Rwanda hotels)
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+// Input: items from Merge node (original guest + dummy predictions)
+return items.map(item => {
+    const guest = item.json;
 
-app.use(cors());
-app.use(bodyParser.json());
+    // --- Step 1: Scoring for segment ---
+    let score = 0;
 
-// --- Weight mappings for segmentation ---
-const roomTypeWeight = {
-    'Suite': 1.2,
-    'Deluxe': 1.1,
-    'Standard': 1.0,
-};
-
-const purposeWeight = {
-    'Vacation': 1.2,
-    'Business': 1.0,
-};
-
-// --- Base preference calculation ---
-function getPreferences(guest) {
-    let baseSpa = 0.2;
-    let baseDinner = 0.3;
-    let baseBreakfast = 0.4;
-
-    const pWeight = purposeWeight[guest.purpose_of_visit] || 1.0;
-    const rWeight = roomTypeWeight[guest.room_type] || 1.0;
-
-    // Override if guest has explicit fields
-    const spa = guest.has_spa !== undefined ? (guest.has_spa ? 0.35 : 0.05) : Math.min(1, baseSpa * pWeight * rWeight);
-    const dinner = guest.has_dinner !== undefined ? (guest.has_dinner ? 0.85 : 0.1) : Math.min(1, baseDinner * pWeight * rWeight);
-    const breakfast = guest.has_breakfast !== undefined ? (guest.has_breakfast ? 0.5 : 0.1) : Math.min(1, baseBreakfast * pWeight * rWeight);
-
-    return { spa, dinner, breakfast };
-}
-
-// --- AI placeholder for enrichment (future OpenAI integration) ---
-async function getAIPreferences(guest) {
-    // Future: call OpenAI or ML to predict preferences using country, age_group, purpose, menu
-    const prefs = getPreferences(guest);
-
-    // Example: small adjustments based on country (dummy enrichment)
-    if (guest.country === 'Italy') prefs.dinner = Math.min(1, prefs.dinner + 0.05);
-    if (guest.country === 'France') prefs.breakfast = Math.min(1, prefs.breakfast + 0.05);
-    return prefs;
-}
-
-// --- Segment calculation ---
-function calculateSegment(preferences, guest) {
-    const score = preferences.spa * 0.3 + preferences.dinner * 0.4 + preferences.breakfast * 0.3;
-    const pWeight = purposeWeight[guest.purpose_of_visit] || 1.0;
-    const rWeight = roomTypeWeight[guest.room_type] || 1.0;
-    const weightedScore = score * pWeight * rWeight;
-
-    if (weightedScore > 0.6) return 'High';
-    if (weightedScore > 0.35) return 'Medium';
-    return 'Low';
-}
-
-// --- POST /predict ---
-app.post('/predict', async (req, res) => {
-    const guests = req.body;
-
-    if (!Array.isArray(guests) || guests.length === 0) {
-        return res.status(400).json({ error: 'Request body must be a non-empty array of guests' });
+    // Room type scoring
+    switch (guest.room_type) {
+        case "Suite": score += 3; break;
+        case "Deluxe": score += 2; break;
+        case "Standard": score += 1; break;
+        default: score += 1;
     }
 
-    const predictions = [];
-    for (const guest of guests) {
-        // Use AI preferences for new/cold guests, else use existing fields
-        let preferences;
-        if (!guest.has_spa && !guest.has_dinner && !guest.has_breakfast) {
-            preferences = await getAIPreferences(guest);
-        } else {
-            preferences = getPreferences(guest);
+    // Purpose of visit scoring
+    switch (guest.purpose_of_visit) {
+        case "Vacation": score += 3; break;
+        case "Business": score += 2; break;
+        default: score += 1;
+    }
+
+    // Age group scoring
+    switch (guest.age_group) {
+        case "36-50": score += 3; break;
+        case "26-35": score += 2; break;
+        case "18-25": score += 1; break;
+        default: score += 1;
+    }
+
+    // Weighted dummy predictions if available
+    score += (guest.spa || 0.4) * 2;
+    score += ((guest.dinner + guest.breakfast)/2 || 0.5) * 2;
+
+    // --- Step 2: Assign segment ---
+    let segment = "Low";
+    if (score >= 10) segment = "High";
+    else if (score >= 7) segment = "Medium";
+
+    // --- Step 3: Generate best_send_hour dynamically ---
+    // Vacation guests → evening hours, Business → morning or midday
+    let best_send_hour = 17; // default evening
+    if (guest.purpose_of_visit === "Vacation") {
+        best_send_hour = (segment === "High") ? 18 : 17;
+    } else if (guest.purpose_of_visit === "Business") {
+        best_send_hour = (segment === "High") ? 9 : 11;
+    } else {
+        best_send_hour = 12; // default for other purposes
+    }
+
+    // --- Step 4: Dummy AI predictions (weighted slightly) ---
+    const predicted_meal = (segment === "High" && guest.purpose_of_visit === "Vacation") 
+                            ? "Dinner" : "Breakfast";
+    const menu_options = ["Steak with sides","Roast dinner","International buffet","Croissant & coffee"];
+    const menu_recommendation = menu_options[Math.floor(Math.random()*menu_options.length)];
+    const predicted_spa = parseFloat((0.3 + Math.random() * 0.5).toFixed(2)); // 0.3–0.8
+
+    // --- Step 5: Build enriched output ---
+    return {
+        json: {
+            guest_id: guest.guest_id,
+            country: guest.country,
+            age_group: guest.age_group,
+            room_type: guest.room_type,
+            purpose_of_visit: guest.purpose_of_visit,
+            segment: segment,
+            spa: guest.spa,
+            dinner: guest.dinner,
+            breakfast: guest.breakfast,
+            best_send_hour: best_send_hour,
+
+            predicted_meal: predicted_meal,
+            predicted_spa: predicted_spa,
+            menu_recommendation: menu_recommendation
         }
-
-        const segment = calculateSegment(preferences, guest);
-
-        predictions.push({
-            guest_id: guest.guest_id || `guest_${Math.floor(Math.random() * 10000)}`,
-            spa: preferences.spa,
-            dinner: preferences.dinner,
-            breakfast: preferences.breakfast,
-            best_send_hour: 17,
-            segment: segment
-        });
-    }
-
-    res.json(predictions);
-});
-
-// --- Start server ---
-app.listen(PORT, () => {
-    console.log(`Dummy ML service running on port ${PORT}`);
+    };
 });
